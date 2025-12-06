@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
+
 @Controller
 public class WebController {
 
@@ -23,15 +25,27 @@ public class WebController {
     // 1. 首页：闲鱼风市场 (默认只查 ON_SALE 的书)
     @GetMapping("/")
     public String index(Model model, @RequestParam(value = "keyword", required = false) String keyword) {
+        List<Product> products;
+
+        // 1. 先查出商品列表
         if (keyword != null && !keyword.isEmpty()) {
-            // 搜索功能：按标题搜索且必须是在售状态
-            model.addAttribute("products", productRepository.findByTitleContainingAndStatus(keyword, "ON_SALE"));
+            products = productRepository.findByTitleContainingAndStatus(keyword, "ON_SALE");
         } else {
-            // 默认展示：查所有在售商品
-            model.addAttribute("products", productRepository.findByStatus("ON_SALE"));
+            products = productRepository.findByStatus("ON_SALE");
         }
-        model.addAttribute("keyword", keyword); // 回显搜索词
-        return "market_v2"; // 对应 templates/market_v2.html
+
+        // 2. 🔥【关键步骤】遍历列表，填入卖家名字
+        for (Product p : products) {
+            // 根据 sellerId 去用户表查 User
+            userRepository.findById(p.getSellerId()).ifPresent(user -> {
+                // 把查到的用户名填入 product 对象
+                p.setSellerName(user.getUsername());
+            });
+        }
+
+        model.addAttribute("products", products);
+        model.addAttribute("keyword", keyword);
+        return "index"; // 这里记得改成你实际的 HTML 文件名，你上面代码写的是 market_v2，如果是那个就填 market_v2
     }
 
     // 2. 商品详情页
@@ -39,8 +53,14 @@ public class WebController {
     public String productDetail(@PathVariable Integer id, Model model) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("商品未找到"));
+
+        // 🔥【关键步骤】详情页也要填名字
+        userRepository.findById(product.getSellerId()).ifPresent(user -> {
+            product.setSellerName(user.getUsername());
+        });
+
         model.addAttribute("product", product);
-        return "product_detail"; // 对应 templates/product_detail.html
+        return "product_detail";
     }
 
     // 3. 个人中心：查看我的订单 (买到的 + 卖出的)

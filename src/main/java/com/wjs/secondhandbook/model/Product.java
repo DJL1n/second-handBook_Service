@@ -1,6 +1,7 @@
 package com.wjs.secondhandbook.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,4 +19,7 @@ public class Product {
     private String description;
     private String status;
     private LocalDateTime createdAt;
+
+    @Transient
+    private String sellerName;
 }
