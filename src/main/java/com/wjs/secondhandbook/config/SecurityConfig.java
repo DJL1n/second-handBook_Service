@@ -1,5 +1,6 @@
 package com.wjs.secondhandbook.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,33 +13,52 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // 1. 修改这里：使用 NoOpPasswordEncoder (不加密，直接明文比对)
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // 这是一个过时的方法，但在测试和非生产环境中为了方便直接查看数据库密码非常有用
         return NoOpPasswordEncoder.getInstance();
     }
 
-    // 2. 配置安全拦截规则 (保持不变)
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // 1. 允许匿名访问的路径：只有 静态资源、注册、登录
-                        .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
-                        .requestMatchers("/register", "/login").permitAll()
-                        // (注意：把 "/" 和 "/books/**" 从上面删掉了！)
-
-                        // 2. 其他所有请求（包括首页 "/"）都必须登录
+                        // 1. 静态资源 + 首页 + 商品详情 + 图片上传路径 -> 统统放行
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/uploads/**").permitAll()
+                        .requestMatchers("/", "/product/**").permitAll()
+                        // 2. 只有原本的API和个人中心需要登录
+                        .requestMatchers("/my-shelf", "/books/buy/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
-                        .loginPage("/login")
+                        .loginPage("/login") // 这里只作为后备，主要靠弹窗
+                        .loginProcessingUrl("/api/login") // 前端弹窗POST这个地址
+                        // --- 关键点：登录成功不跳转，返回 JSON ---
+                        .successHandler((req, resp, auth) -> {
+                            resp.setContentType("application/json;charset=utf-8");
+                            resp.getWriter().write("{\"code\": 200, \"message\": \"登录成功\"}");
+                        })
+                        // --- 关键点：登录失败不跳转，返回 JSON ---
+                        .failureHandler((req, resp, ex) -> {
+                            resp.setContentType("application/json;charset=utf-8");
+                            resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            resp.getWriter().write("{\"code\": 401, \"message\": \"账号或密码错误\"}");
+                        })
                         .permitAll()
+                )
+                // 遇到未登录的情况，不跳转302，而是返回401（方便前端判断弹窗）
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, resp, authException) -> {
+                            // 如果是 AJAX 请求，返回 401
+                            if ("XMLHttpRequest".equals(req.getHeader("X-Requested-With"))) {
+                                resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                            } else {
+                                // 如果是普通浏览器访问受限页面，还是跳登录页
+                                resp.sendRedirect("/login");
+                            }
+                        })
                 )
                 .csrf(csrf -> csrf.disable());
 
         return http.build();
     }
-
 }
