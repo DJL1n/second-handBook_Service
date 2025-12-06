@@ -45,6 +45,7 @@
             <!-- 已登录显示 -->
             <div sec:authorize="isAuthenticated()">
                 <span class="me-3 fw-bold"><i class="fas fa-user-circle"></i> <span sec:authentication="name"></span></span>
+                <a href="/my-profile" class="btn btn-outline-dark btn-sm rounded-pill px-3 me-2">我的订单</a>
                 <a href="/logout" class="text-dark text-decoration-none small">退出</a>
             </div>
         </div>
@@ -57,9 +58,11 @@
 
         <!-- 循环商品卡片 -->
         <div class="col" th:each="p : ${products}">
-            <div class="product-card h-100" th:onclick="'window.location.href=\'/product/' + ${p.productId} + '\''">
-                <!-- 图片：如果没有图就用占位图 -->
-                <img th:src="${p.imageUrl != null ? p.imageUrl : 'https://picsum.photos/300/200?random=' + p.productId}"
+            <!-- 🔥修正点1：p.productId 改为 p.id -->
+            <div class="product-card h-100" th:onclick="'window.location.href=\'/product/' + ${p.id} + '\''">
+
+                <!-- 🔥修正点2：random=后面也改成 p.id -->
+                <img th:src="${p.imageUrl != null ? p.imageUrl : 'https://picsum.photos/300/200?random=' + p.id}"
                      class="card-img-top" alt="商品图片">
 
                 <div class="card-body p-3">
@@ -68,13 +71,18 @@
 
                     <div class="seller-info">
                         <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="user-avatar">
-                        <span>发布者ID: <span th:text="${p.sellerId}"></span></span>
+                        <span>卖家ID: <span th:text="${p.sellerId}"></span></span>
                         <span class="ms-auto text-muted small">刚刚发布</span>
                     </div>
                 </div>
             </div>
         </div>
 
+    </div>
+
+    <!-- 空状态提示 -->
+    <div th:if="${#lists.isEmpty(products)}" class="text-center mt-5 text-muted">
+        <h3>🍂 哎呀，现在没有在售的书籍</h3>
     </div>
 </div>
 
@@ -117,9 +125,8 @@
         myModal.show();
     }
 
-    // 检查登录状态：给发布按钮用的
+    // 检查登录状态
     function checkLogin(event) {
-        // Thymeleaf 在渲染时会把 sec:authorize 的结果变成 true/false
         /*<![CDATA[*/
         var isLogged = [[${#authorization.expression('isAuthenticated()')}]];
         /*]]>*/
@@ -143,10 +150,8 @@
         })
             .then(response => {
                 if (response.ok) {
-                    // 登录成功，刷新页面
-                    location.reload();
+                    location.reload(); // 登录成功刷新
                 } else {
-                    // 登录失败，显示错误提示
                     document.getElementById('loginError').style.display = 'block';
                 }
             })
