@@ -3,6 +3,8 @@ package com.wjs.secondhandbook.controller;
 import com.wjs.secondhandbook.model.Book;
 import com.wjs.secondhandbook.service.BookService;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.Enumeration;
 
 @RestController
 public class BookController {
@@ -23,9 +25,25 @@ public class BookController {
         }
     }
 
-    // 1. 浏览市场：GET /books?keyword=Java
     @GetMapping("/books")
-    public Iterable<Book> getAllBooks(@RequestParam(value = "keyword", required = false) String keyword) {
+    public Iterable<Book> getAllBooks(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            HttpServletRequest request // <--- 1. 增加这个参数
+    ) {
+        // --- 🕵️‍♂️ 侦探代码开始 ---
+        System.out.println("========== 收到 /books 请求 ==========");
+        System.out.println("Cookie 头信息: " + request.getHeader("Cookie"));
+
+        System.out.println("--- 所有 Header 清单 ---");
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String key = headerNames.nextElement();
+            String value = request.getHeader(key);
+            System.out.println(key + ": " + value);
+        }
+        System.out.println("======================================");
+        // --- 侦探代码结束 ---
+
         return bookService.getMarketplaceBooks(keyword);
     }
 
