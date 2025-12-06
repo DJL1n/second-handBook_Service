@@ -96,55 +96,59 @@
     </div>
 </nav>
 
-<!-- 🔥 改动：父容器变为 container，内部增加一个白色背景板 -->
+<!-- 商品列表容器 -->
 <div class="container py-4">
 
-    <!-- 这里是新建的白色背景板 -->
-    <div class="market-board">
+    <!-- 🔥 新增：用 row + justify-content-center + col-lg-10 来限制父容器宽度 -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10"> <!-- 这里控制宽度，10/12 也就是占屏幕宽度的 83% -->
 
-        <!-- 标题栏 -->
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-            <h5 class="m-0 fw-bold"><i class="fas fa-fire text-danger me-2"></i>最新上架</h5>
-            <span class="text-muted small">发现好书，传递知识</span>
-        </div>
+            <div class="market-board">
+                <!-- 标题栏 -->
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                    <h5 class="m-0 fw-bold"><i class="fas fa-fire text-danger me-2"></i>最新上架</h5>
+                    <span class="text-muted small">发现好书，传递知识</span>
+                </div>
 
-        <!--
-            🔥 改动：Grid 布局调整
-            row-cols-lg-5: 大屏显示5个 (更窄)
-            row-cols-md-3: 中屏显示3个
-            g-3: 间隙稍微调小一点 (原本是 g-4)
-        -->
-        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3">
+                <!-- 🔥 改回 row-cols-lg-4 (每行4个) -->
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
 
-            <!-- 循环商品卡片 -->
-            <div class="col" th:each="p : ${products}">
-                <div class="product-card h-100" th:onclick="'window.location.href=\'/product/' + ${p.id} + '\''">
+                    <!-- 循环商品卡片 -->
+                    <div class="col" th:each="p : ${products}">
+                        <div class="product-card h-100" th:onclick="'window.location.href=\'/product/' + ${p.id} + '\''">
 
-                    <!-- 图片 -->
-                    <img th:src="${p.imageUrl != null ? p.imageUrl : 'https://picsum.photos/300/200?random=' + p.id}"
-                         class="card-img-top" alt="商品图片">
+                            <img th:src="${p.imageUrl != null ? p.imageUrl : 'https://picsum.photos/300/200?random=' + p.id}"
+                                 class="card-img-top" alt="商品图片">
 
-                    <div class="card-body">
-                        <h5 class="card-title text-truncate" th:text="${p.title}">商品标题</h5>
-                        <div class="price-tag">¥ <span th:text="${p.price}">99.00</span></div>
+                            <div class="card-body">
+                                <h5 class="card-title text-truncate" th:text="${p.title}">商品标题</h5>
+                                <div class="price-tag">¥ <span th:text="${p.price}">99.00</span></div>
 
-                        <div class="seller-info">
-                            <!-- 随机头像 -->
-                            <img th:src="'https://api.dicebear.com/7.x/initials/svg?seed=' + ${p.sellerId}" class="user-avatar">
-                            <span class="text-truncate" style="max-width: 80px;">同学 <span th:text="${p.sellerId}"></span></span>
+                                <div class="seller-info">
+                                    <!-- 头像 -->
+                                    <img th:src="'https://api.dicebear.com/7.x/initials/svg?seed=' + ${p.sellerId}" class="user-avatar">
+
+                                    <!-- 🔥 重点：这里尝试显示 sellerName，如果没有就显示 ID -->
+                                    <span class="text-truncate">
+                                        卖家: <span th:text="${p.sellerName != null ? p.sellerName : p.sellerId}"></span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                </div> <!-- end row -->
+
+                <!-- 空状态 -->
+                <div th:if="${#lists.isEmpty(products)}" class="text-center py-5 text-muted">
+                    <i class="fas fa-inbox fa-3x mb-3 text-light-gray"></i>
+                    <p>暂无书籍</p>
                 </div>
-            </div>
 
-        </div>
+            </div> <!-- end market-board -->
 
-        <!-- 空状态提示 -->
-        <div th:if="${#lists.isEmpty(products)}" class="text-center py-5 text-muted">
-            <i class="fas fa-inbox fa-3x mb-3 text-light-gray"></i>
-            <p>书架空空如也，快来发布第一本书吧！</p>
-        </div>
-    </div>
+        </div> <!-- end col-lg-10 -->
+    </div> <!-- end row -->
 </div>
 
 <!-- 悬浮发布按钮 -->
