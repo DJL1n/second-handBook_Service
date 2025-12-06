@@ -2,6 +2,8 @@ package com.wjs.secondhandbook.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -16,35 +18,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 1. 权限配置
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                        // 🔥 必须把 /api/login 放行，允许匿名访问，否则无法登录
                         .requestMatchers("/", "/index", "/register", "/api/login").permitAll()
-                        .requestMatchers("/error").permitAll() // 必须放行错误页
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
-
-                // 2. 登录配置
                 .formLogin(form -> form
-                        .loginPage("/")
-                        .loginProcessingUrl("/api/login")
-                        .defaultSuccessUrl("/", true)
-                        .failureUrl("/?error")
+                        .loginPage("/") // 如果用户未登录访问受限页，跳回首页
+                        // ⚠️ 注意：删掉了 .loginProcessingUrl("/api/login")
+                        // 因为我们要用自定义 Controller 处理 AJAX 请求，不要让 Filter 拦截它
                         .permitAll()
                 )
-
-                // 3. 登出配置
                 .logout(logout -> logout
                         .logoutSuccessUrl("/")
                         .permitAll()
                 )
-
-                // 4. 关闭 CSRF (新写法)
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 5. 🔥 修复报错点：Headers 的新写法
-                // 以前是 headers.frameOptions().disable() -> 报错
-                // 现在必须写成 headers.frameOptions(frame -> frame.disable())
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.disable())
                 );
@@ -52,7 +43,13 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 明文密码匹配器
+    // 🔥 必须要把这个 Bean 暴露出来，Controller 才能用它来校验密码
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    // 明文密码匹配器 (符合你的要求)
     @SuppressWarnings("deprecation")
     @Bean
     public PasswordEncoder passwordEncoder() {
