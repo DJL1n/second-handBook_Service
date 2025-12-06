@@ -24,20 +24,21 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // 允许匿名访问的路径
+                        // 1. 允许匿名访问的路径：只有 静态资源、注册、登录
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
-                        .requestMatchers("/register", "/login", "/").permitAll()
-                        // 其他所有请求都需要登录才能访问
+                        .requestMatchers("/register", "/login").permitAll()
+                        // (注意：把 "/" 和 "/books/**" 从上面删掉了！)
+
+                        // 2. 其他所有请求（包括首页 "/"）都必须登录
                         .anyRequest().authenticated()
                 )
-                // 配置表单登录
                 .formLogin(form -> form
                         .loginPage("/login")
                         .permitAll()
                 )
-                // 关闭 CSRF 保护
                 .csrf(csrf -> csrf.disable());
 
         return http.build();
     }
+
 }

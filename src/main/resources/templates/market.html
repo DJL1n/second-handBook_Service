@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>校园二手书市场</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h1 { color: #333; }
+        .nav a { margin-left: 15px; text-decoration: none; color: #007bff; font-weight: bold; }
+
+        /* 搜索框样式 */
+        .search-box { margin-bottom: 20px; display: flex; gap: 10px; }
+        .search-box input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .search-box button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        /* 书籍卡片列表 */
+        .book-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .book-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .book-card:hover { transform: translateY(-5px); }
+        .book-title { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #333; }
+        .book-author { color: #666; font-size: 0.9em; margin-bottom: 5px; }
+        .book-price { color: #e74c3c; font-size: 1.3em; font-weight: bold; margin-top: 10px; }
+        .book-desc { color: #888; font-size: 0.9em; margin-top: 10px; height: 40px; overflow: hidden; }
+
+        /* 购买按钮 */
+        .buy-btn { display: block; width: 100%; padding: 10px; margin-top: 15px; background-color: #28a745; color: white; text-align: center; border: none; border-radius: 4px; cursor: pointer; }
+        .buy-btn:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>📚 校园二手书市场</h1>
+        <div class="nav">
+            <span>欢迎你, <span th:text="${#authentication.name}">User</span>!</span>
+            <a href="/">逛市场</a>
+            <a href="/my-shelf">我的书架</a>
+            <a href="/logout">退出登录</a>
+        </div>
+    </div>
+
+    <!-- 搜索表单 -->
+    <form class="search-box" action="/" method="get">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="搜索书名或作者...">
+        <button type="submit">搜索</button>
+    </form>
+
+    <!-- 书籍列表 -->
+    <div class="book-list">
+        <!-- 循环遍历 books 列表 -->
+        <div class="book-card" th:each="book : ${books}">
+            <div class="book-title" th:text="${book.title}">书名</div>
+            <div class="book-author">作者：<span th:text="${book.author}"></span></div>
+            <div class="book-desc" th:text="${book.description}">描述...</div>
+            <div class="book-price">¥ <span th:text="${book.price}">0.00</span></div>
+
+            <!-- 购买按钮 (提交表单到后端接口) -->
+            <form th:action="@{'/books/buy/' + ${book.bookId}}" method="post" onsubmit="return confirm('确定要购买这本书吗？');">
+                <button type="submit" class="buy-btn">立即购买</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 如果没有书 -->
+    <div th:if="${#lists.isEmpty(books)}" style="text-align: center; color: #999; margin-top: 50px;">
+        <h3>这里空空如也，或者书都被抢光了~ 🍂</h3>
+    </div>
+</div>
+
+</body>
+</html>
