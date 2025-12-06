@@ -7,16 +7,16 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-@Table("products")
-public class Product {
+@Table("orders")
+public class Order {
     @Id
     private Integer id;
+    private Integer productId;
+    private Integer buyerId;
     private Integer sellerId;
-    private String title;
-    private String author;
     private BigDecimal price;
-    private String imageUrl;
-    private String description;
-    private String status;
+    private String status; // WAIT_SHIP, WAIT_RECEIVE, COMPLETED, REFUNDING, REFUNDED
+    private String shippingAddress;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
