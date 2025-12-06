@@ -18,15 +18,16 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // 1. 查库
+        // 1. 从数据库查 User
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("找不到用户: " + username));
 
-        // 2. 构建 UserDetails
+        // 2. 转换成 Security 的 UserDetails
+        // 这里会读取数据库里的 role 字段 (例如 "ADMIN" 或 "USER")
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getUsername())
                 .password(user.getPassword())
-                .roles(user.getRole()) // 这里会读取数据库里的 "ADMIN" 或 "USER"
+                .roles(user.getRole())
                 .build();
     }
 }

@@ -13,7 +13,6 @@ public class Product {
     private Integer id;
     private Integer sellerId;
     private String title;
-    private String author;
     private BigDecimal price;
     private String imageUrl;
     private String description;
