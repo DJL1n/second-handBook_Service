@@ -3,13 +3,18 @@ package com.wjs.secondhandbook.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+// 🔥 必须导入这个接口
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -20,15 +25,12 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                        // 🔥 必须把 /api/login 放行，允许匿名访问，否则无法登录
                         .requestMatchers("/", "/index", "/register", "/api/login").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
-                        .loginPage("/") // 如果用户未登录访问受限页，跳回首页
-                        // ⚠️ 注意：删掉了 .loginProcessingUrl("/api/login")
-                        // 因为我们要用自定义 Controller 处理 AJAX 请求，不要让 Filter 拦截它
+                        .loginPage("/")
                         .permitAll()
                 )
                 .logout(logout -> logout
@@ -36,23 +38,35 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .csrf(AbstractHttpConfigurer::disable)
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.disable())
-                );
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()));
 
         return http.build();
     }
 
-    // 🔥 必须要把这个 Bean 暴露出来，Controller 才能用它来校验密码
+    // 🔥 核心修改：将 UserDetailsService 和 PasswordEncoder 作为参数传入
+    // Spring 会自动找到你的 UserDetailsServiceImpl 并注入给 userDetailsService 参数
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
+
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        // 这里的 userDetailsService 变量是接口类型，DaoAuthenticationProvider 肯定能认出
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+
+        return new ProviderManager(provider);
     }
 
-    // 明文密码匹配器 (符合你的要求)
+    // 依然使用明文密码匹配器
     @SuppressWarnings("deprecation")
     @Bean
     public PasswordEncoder passwordEncoder() {
         return NoOpPasswordEncoder.getInstance();
+    }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
     }
 }
