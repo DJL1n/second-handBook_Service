@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>个人中心</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>👤 个人中心</h2>
+        <a href="/" class="btn btn-outline-secondary">返回市场</a>
+    </div>
+
+    <!-- 选项卡导航 -->
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#buy-tab">我买到的 🛒</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sell-tab">我卖出的 💰</button>
+        </li>
+    </ul>
+
+    <div class="tab-content bg-white p-4 border border-top-0 rounded-bottom shadow-sm">
+
+        <!-- 1. 我买到的列表 -->
+        <div class="tab-pane fade show active" id="buy-tab">
+            <table class="table align-middle">
+                <thead><tr><th>订单号</th><th>商品</th><th>价格</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                <tr th:each="order : ${buyOrders}">
+                    <td th:text="${order.id}">1001</td>
+                    <td>商品ID: <span th:text="${order.productId}"></span></td> <!-- 这里可以优化显示书名 -->
+                    <td class="text-danger fw-bold">¥ <span th:text="${order.price}"></span></td>
+                    <td>
+                        <span th:if="${order.status == 'WAIT_SHIP'}" class="badge bg-secondary">待发货</span>
+                        <span th:if="${order.status == 'WAIT_RECEIVE'}" class="badge bg-primary">待收货</span>
+                        <span th:if="${order.status == 'COMPLETED'}" class="badge bg-success">已完成</span>
+                    </td>
+                    <td>
+                        <!-- 只有待收货状态，才显示确认收货按钮 -->
+                        <button th:if="${order.status == 'WAIT_RECEIVE'}"
+                                th:onclick="'confirmReceive(' + ${order.id} + ')'"
+                                class="btn btn-success btn-sm">确认收货</button>
+                        <span th:if="${order.status == 'WAIT_SHIP'}" class="text-muted small">等待卖家发货...</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(buyOrders)}"><td colspan="5" class="text-center text-muted">暂无购买记录</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. 我卖出的列表 -->
+        <div class="tab-pane fade" id="sell-tab">
+            <table class="table align-middle">
+                <thead><tr><th>订单号</th><th>商品</th><th>成交价</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                <tr th:each="order : ${sellOrders}">
+                    <td th:text="${order.id}">1001</td>
+                    <td>商品ID: <span th:text="${order.productId}"></span></td>
+                    <td class="text-success fw-bold">+ ¥ <span th:text="${order.price}"></span></td>
+                    <td>
+                        <span th:if="${order.status == 'WAIT_SHIP'}" class="badge bg-warning text-dark">待发货</span>
+                        <span th:if="${order.status == 'WAIT_RECEIVE'}" class="badge bg-primary">已发货</span>
+                        <span th:if="${order.status == 'COMPLETED'}" class="badge bg-success">交易成功</span>
+                    </td>
+                    <td>
+                        <!-- 只有待发货状态，才显示发货按钮 -->
+                        <button th:if="${order.status == 'WAIT_SHIP'}"
+                                th:onclick="'shipOrder(' + ${order.id} + ')'"
+                                class="btn btn-primary btn-sm">立即发货</button>
+                        <span th:if="${order.status == 'WAIT_RECEIVE'}" class="text-muted small">等待买家收货...</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(sellOrders)}"><td colspan="5" class="text-center text-muted">暂无卖出记录</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 发送请求的通用函数
+    function sendAction(url) {
+        if(!confirm("确定执行此操作吗？")) return;
+
+        fetch(url, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if(data.code === 200) location.reload(); // 成功后刷新看状态变化
+            });
+    }
+
+    function shipOrder(orderId) {
+        sendAction('/api/trade/ship/' + orderId);
+    }
+
+    function confirmReceive(orderId) {
+        sendAction('/api/trade/receive/' + orderId);
+    }
+</script>
+
+</body>
+</html>
