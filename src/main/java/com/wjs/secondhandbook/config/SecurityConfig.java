@@ -8,7 +8,6 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-// 🔥 必须导入这个接口
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,21 +19,32 @@ import org.springframework.security.web.context.SecurityContextRepository;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // 🔥 1. 这里加入了 UserDetailsService 参数，为了给 rememberMe 使用
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, UserDetailsService userDetailsService) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                        .requestMatchers("/", "/index", "/register", "/api/login", "/product/**").permitAll()
+                        .requestMatchers("/", "/index", "/login", "/register", "/api/login", "/product/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
-                        .loginPage("/")
+                        .loginPage("/login")
+                        .defaultSuccessUrl("/", false)
                         .permitAll()
+                )
+                // 🔥 2. 新增：记住我功能配置
+                .rememberMe(remember -> remember
+                        .userDetailsService(userDetailsService) // 必须配置，用于重新加载用户信息
+                        .tokenValiditySeconds(60 * 60 * 24 * 7) // 设置有效时间：7天 (单位秒)
+                        .key("MySecretKeyForSigning")           // 设置一个私钥，用于生成 Cookie 签名
+                        .rememberMeParameter("remember-me")     // 前端 checkbox 的 name 属性值，默认就是 "remember-me"
                 )
                 .logout(logout -> logout
                         .logoutSuccessUrl("/")
+                        // 退出时自动删除 remember-me cookie
+                        .deleteCookies("JSESSIONID", "remember-me")
                         .permitAll()
                 )
                 .csrf(AbstractHttpConfigurer::disable)
@@ -43,22 +53,16 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 🔥 核心修改：将 UserDetailsService 和 PasswordEncoder 作为参数传入
-    // Spring 会自动找到你的 UserDetailsServiceImpl 并注入给 userDetailsService 参数
     @Bean
     public AuthenticationManager authenticationManager(
             UserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder) {
-
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        // 这里的 userDetailsService 变量是接口类型，DaoAuthenticationProvider 肯定能认出
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
-
         return new ProviderManager(provider);
     }
 
-    // 依然使用明文密码匹配器
     @SuppressWarnings("deprecation")
     @Bean
     public PasswordEncoder passwordEncoder() {

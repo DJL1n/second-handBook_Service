@@ -91,4 +91,9 @@ public class WebController {
 
         return "my_shelf"; // 对应 templates/my_shelf.html
     }
+
+    @GetMapping("/require-login")
+    public String requireLogin(@RequestParam("target") String targetUrl) {
+        return "redirect:" + targetUrl;
+    }
 }

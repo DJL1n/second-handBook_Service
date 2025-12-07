@@ -25,14 +25,19 @@
 
         <!-- 右侧：登录状态判断 -->
         <div>
-            <!-- 情况A：未登录 (Anonymous) -->
+            <!-- 情况A：未登录 -->
             <div sec:authorize="!isAuthenticated()">
                 <span class="text-muted small me-2">喜欢这个商品?</span>
-                <a href="/login" class="btn btn-outline-primary btn-sm rounded-pill px-3 me-1">登录</a>
+
+                <!-- ✅ 关键修改在这里：使用跳板链接 -->
+                <a th:href="@{/require-login(target='/product/' + ${product.id})}"
+                   class="btn btn-outline-primary btn-sm rounded-pill px-3 me-1">
+                    登录
+                </a>
                 <a href="/register" class="btn btn-primary btn-sm rounded-pill px-3">注册</a>
             </div>
 
-            <!-- 情况B：已登录 (Authenticated) -->
+            <!-- 情况B：已登录 -->
             <div sec:authorize="isAuthenticated()" class="d-flex align-items-center">
                 <span class="text-dark me-3 small">
                     <i class="fas fa-user-circle text-primary"></i>
