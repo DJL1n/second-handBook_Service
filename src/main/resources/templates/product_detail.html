@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 1. 引入 Spring Security 标签库 xmlns:sec -->
+<!-- 1. 引入 Spring Security 标签库 -->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
@@ -11,7 +11,7 @@
 </head>
 <body class="bg-light">
 
-<!-- 2. 顶部导航栏：改为左右布局 -->
+<!-- 2. 顶部导航栏 -->
 <nav class="navbar navbar-light bg-white shadow-sm mb-4 sticky-top">
     <div class="container d-flex justify-content-between align-items-center">
 
@@ -28,9 +28,8 @@
             <!-- 情况A：未登录 -->
             <div sec:authorize="!isAuthenticated()">
                 <span class="text-muted small me-2">喜欢这个商品?</span>
-
-                <!-- ✅ 关键修改在这里：使用跳板链接 -->
-                <a th:href="@{/require-login(target='/product/' + ${product.id})}"
+                <!-- 这里的 require-login 如果你有对应控制器就保留，否则建议直接改为 /login -->
+                <a th:href="@{/login}"
                    class="btn btn-outline-primary btn-sm rounded-pill px-3 me-1">
                     登录
                 </a>
@@ -75,7 +74,7 @@
                     <span th:if="${product.status == 'ON_SALE'}" class="badge bg-success mb-2">正在出售</span>
                     <span th:if="${product.status == 'SOLD'}" class="badge bg-secondary mb-2">已售出</span>
 
-                    <h2 class="fw-bold mb-2" th:text="${product.title}">Java编程思想</h2>
+                    <h2 class="fw-bold mb-2" th:text="${product.title}">商品标题</h2>
                     <p class="text-muted mb-3">
                         <i class="fas fa-clock"></i> 上架时间:
                         <span th:text="${#temporals.format(product.createdAt, 'yyyy-MM-dd HH:mm')}">2023-01-01</span>
@@ -109,9 +108,6 @@
                     <button th:if="${product.status == 'SOLD'}" disabled class="btn btn-secondary btn-lg rounded-pill">
                         来晚了，已被抢走 😭
                     </button>
-
-                    <!-- 分享或收藏按钮（可选） -->
-                    <!-- <button class="btn btn-outline-secondary rounded-pill">收藏商品</button> -->
                 </div>
             </div>
         </div>
@@ -119,6 +115,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- 🔥 核心逻辑修改部分 -->
 <script>
     function buyNow(productId) {
         // Thymeleaf 获取后端登录状态
@@ -126,31 +124,34 @@
         var isLogged = [[${#authorization.expression('isAuthenticated()')}]];
         /*]]>*/
 
-        // 3. 修改 JS 逻辑：如果未登录，只提示，不跳转
+        // 1. 如果未登录，提示并结束
         if (!isLogged) {
             alert("请先点击右上角的【登录】按钮登录后再购买！");
-            // window.location.href = '/login'; // 已注释：不再自动跳转
-            return; // 直接结束函数，停留在当前页面
+            return;
         }
 
-        if(!confirm('确定要购买这本书吗？下单后请在"个人中心"查看订单。')) return;
+        // 2. 确认购买
+        if(!confirm('确定要购买这本书吗？\n下单后请在"个人中心"查看订单详情。')) return;
 
-        // AJAX 提交购买请求
+        // 3. 发送 AJAX 请求
         fetch('/api/trade/buy/' + productId, {
             method: 'POST'
         })
             .then(response => response.json())
             .then(data => {
-                if (data.code === 200) {
-                    alert("🎉 恭喜！" + data.message);
-                    window.location.href = "/my-profile"; // 买完跳去订单页
+                // 🔥 这里使用了 data.success 来判断
+                // 因为上一条回答中的 Controller 返回的是 {"success": true, "message": "..."}
+                if (data.success) {
+                    alert("🎉 " + data.message);
+                    // 🔥 成功后跳转页面
+                    window.location.href = "/my-profile";
                 } else {
                     alert("❌ 购买失败: " + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert("系统错误，请稍后再试");
+                alert("系统错误，请检查网络或联系管理员");
             });
     }
 </script>

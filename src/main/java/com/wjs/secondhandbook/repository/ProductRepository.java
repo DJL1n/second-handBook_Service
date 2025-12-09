@@ -15,4 +15,7 @@ public interface ProductRepository extends CrudRepository<Product, Integer> {
 
     // 搜索功能 (根据标题模糊查询 且 必须是在售状态)
     List<Product> findByTitleContainingAndStatus(String title, String status);
+
+    // ✅ 新增：根据卖家ID查询商品列表
+    List<Product> findBySellerId(Long sellerId);
 }

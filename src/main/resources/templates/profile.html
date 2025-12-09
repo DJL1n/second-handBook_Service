@@ -65,13 +65,29 @@
                         <span th:if="${order.status == 'WAIT_SHIP'}" class="badge bg-warning text-dark">待发货</span>
                         <span th:if="${order.status == 'WAIT_RECEIVE'}" class="badge bg-primary">已发货</span>
                         <span th:if="${order.status == 'COMPLETED'}" class="badge bg-success">交易成功</span>
+                        <!-- ✅ 新增：显示已取消状态 -->
+                        <span th:if="${order.status == 'CANCELLED'}" class="badge bg-secondary text-decoration-line-through">已取消</span>
                     </td>
                     <td>
-                        <!-- 只有待发货状态，才显示发货按钮 -->
-                        <button th:if="${order.status == 'WAIT_SHIP'}"
-                                th:onclick="'shipOrder(' + ${order.id} + ')'"
-                                class="btn btn-primary btn-sm">立即发货</button>
+                        <!-- 操作按钮区域 -->
+
+                        <!-- 情况1：待发货 -->
+                        <div th:if="${order.status == 'WAIT_SHIP'}">
+                            <!-- 原有的发货按钮 -->
+                            <button th:onclick="'shipOrder(' + ${order.id} + ')'"
+                                    class="btn btn-primary btn-sm">立即发货</button>
+
+                            <!-- ✅ 新增：取消订单按钮 (outline-danger 样式，稍微留点左边距 ms-1) -->
+                            <button th:onclick="'cancelOrder(' + ${order.id} + ')'"
+                                    class="btn btn-outline-danger btn-sm ms-1">
+                                <i class="fas fa-times"></i> 取消
+                            </button>
+                        </div>
+
                         <span th:if="${order.status == 'WAIT_RECEIVE'}" class="text-muted small">等待买家收货...</span>
+
+                        <!-- ✅ 新增：如果已取消，显示提示 -->
+                        <span th:if="${order.status == 'CANCELLED'}" class="text-muted small">订单已关闭</span>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(sellOrders)}"><td colspan="5" class="text-center text-muted">暂无卖出记录</td></tr>
@@ -101,6 +117,14 @@
 
     function confirmReceive(orderId) {
         sendAction('/api/trade/receive/' + orderId);
+    }
+
+    function cancelOrder(orderId) {
+        // 二次确认，防止手滑
+        if(!confirm("⚠️ 确定要拒绝发货并取消订单吗？\n\n取消后，商品将自动重新上架，买家会收到退款通知。")) return;
+
+        // 复用你写好的 sendAction 发送请求
+        sendAction('/api/trade/cancel/' + orderId);
     }
 </script>
 
