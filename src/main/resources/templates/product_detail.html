@@ -1,53 +1,43 @@
 <!DOCTYPE html>
-<!-- 1. 引入 Spring Security 标签库 -->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${product.title}">详情</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
-<!-- 2. 顶部导航栏 -->
+<!-- 引入 Navbar (建议之后把 Navbar 抽离成 fragment，这里为了完整性先写在这里) -->
 <nav class="navbar navbar-light bg-white shadow-sm mb-4 sticky-top">
     <div class="container d-flex justify-content-between align-items-center">
-
-        <!-- 左侧：返回及标题 -->
         <div class="d-flex align-items-center">
             <a class="btn btn-link text-dark text-decoration-none me-3" href="/">
                 <i class="fas fa-arrow-left"></i> 返回市场
             </a>
-            <span class="fw-bold text-secondary border-start ps-3 d-none d-md-block">商品详情</span>
+            <span class="fw-bold text-secondary border-start ps-3">商品详情</span>
         </div>
-
-        <!-- 右侧：登录状态判断 -->
         <div>
-            <!-- 情况A：未登录 -->
-            <div sec:authorize="!isAuthenticated()">
-                <span class="text-muted small me-2">喜欢这个商品?</span>
-                <!-- 这里的 require-login 如果你有对应控制器就保留，否则建议直接改为 /login -->
-                <a th:href="@{/login}"
-                   class="btn btn-outline-primary btn-sm rounded-pill px-3 me-1">
-                    登录
+            <!-- 🔥 Navbar 增加消息入口 -->
+            <div sec:authorize="isAuthenticated()" class="d-flex align-items-center">
+                <a href="/my-messages" class="btn btn-link text-dark position-relative me-3">
+                    <i class="fas fa-comment-dots fa-lg"></i>
+                    <!-- 红点 (AJAX 控制显示) -->
+                    <span id="nav-badge" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none">
+                        <span class="visually-hidden">New alerts</span>
+                    </span>
                 </a>
-                <a href="/register" class="btn btn-primary btn-sm rounded-pill px-3">注册</a>
+
+                <span class="text-dark me-2 small">
+                    <i class="fas fa-user-circle text-primary"></i>
+                    <span sec:authentication="name">User</span>
+                </span>
+                <a href="/my-profile" class="btn btn-outline-dark btn-sm rounded-pill">个人中心</a>
             </div>
 
-            <!-- 情况B：已登录 -->
-            <div sec:authorize="isAuthenticated()" class="d-flex align-items-center">
-                <span class="text-dark me-3 small">
-                    <i class="fas fa-user-circle text-primary"></i>
-                    你好, <span class="fw-bold" sec:authentication="name">User</span>
-                </span>
-                <a href="/my-profile" class="btn btn-outline-dark btn-sm rounded-pill me-2">个人中心</a>
-                <form action="/logout" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-link text-secondary text-decoration-none btn-sm p-0">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </form>
+            <div sec:authorize="!isAuthenticated()">
+                <a th:href="@{/login}" class="btn btn-primary btn-sm rounded-pill px-3">登录</a>
             </div>
         </div>
     </div>
@@ -56,59 +46,72 @@
 <div class="container">
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
         <div class="row g-0">
-            <!-- 左侧：图片展示区 -->
-            <div class="col-md-6 bg-white d-flex align-items-center justify-content-center p-4 bg-light">
+            <!-- 图片区域 -->
+            <div class="col-md-6 bg-light d-flex align-items-center justify-content-center p-4">
                 <img th:src="${(product.imageUrl == null || #strings.isEmpty(product.imageUrl))
                     ? 'https://picsum.photos/600/600?random=' + product.id
                     : (product.imageUrl.startsWith('http') ? product.imageUrl : '/' + product.imageUrl)}"
-                     onerror="this.onerror=null; this.src='https://picsum.photos/600/600?random=error';"
-                     class="img-fluid rounded-3 shadow-sm"
-                     style="max-height: 500px; width: 100%; object-fit: cover;"
-                     alt="商品图片">
+                     class="img-fluid rounded-3 shadow-sm" style="max-height: 500px; width: 100%; object-fit: cover;">
             </div>
 
-            <!-- 右侧：商品信息区 -->
+            <!-- 信息区域 -->
             <div class="col-md-6 p-5 d-flex flex-column bg-white">
                 <div class="mb-auto">
-                    <!-- 状态标签 -->
                     <span th:if="${product.status == 'ON_SALE'}" class="badge bg-success mb-2">正在出售</span>
                     <span th:if="${product.status == 'SOLD'}" class="badge bg-secondary mb-2">已售出</span>
 
-                    <h2 class="fw-bold mb-2" th:text="${product.title}">商品标题</h2>
-                    <p class="text-muted mb-3">
-                        <i class="fas fa-clock"></i> 上架时间:
-                        <span th:text="${#temporals.format(product.createdAt, 'yyyy-MM-dd HH:mm')}">2023-01-01</span>
-                    </p>
-                    <h1 class="text-danger fw-bold mb-4">¥ <span th:text="${product.price}">88.00</span></h1>
+                    <h2 class="fw-bold mb-2" th:text="${product.title}">书名</h2>
+                    <h1 class="text-danger fw-bold mb-4">¥ <span th:text="${product.price}"></span></h1>
 
-                    <!-- 卖家描述卡片 -->
                     <div class="card bg-light border-0 p-3 mb-4 rounded-3">
                         <div class="d-flex align-items-center mb-2">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="rounded-circle me-2" width="30">
                             <span class="fw-bold small text-secondary">卖家描述</span>
                         </div>
-                        <p class="mb-0 text-dark" th:text="${product.description}">暂无描述...</p>
+                        <p class="mb-0 text-dark" th:text="${product.description}"></p>
                     </div>
-
-                    <ul class="list-unstyled text-secondary small mb-4">
-                        <li><i class="fas fa-check-circle text-success"></i> 平台担保交易</li>
-                        <li><i class="fas fa-check-circle text-success"></i> 校园实名认证</li>
-                    </ul>
                 </div>
 
-                <!-- 底部操作按钮 -->
-                <div class="d-grid gap-2">
-                    <!-- 只有在售状态才显示购买按钮 -->
-                    <button th:if="${product.status == 'ON_SALE'}"
-                            th:onclick="'buyNow(' + ${product.id} + ')'"
-                            class="btn btn-warning btn-lg rounded-pill fw-bold text-dark">
-                        <i class="fas fa-shopping-cart"></i> 我想要
-                    </button>
-
-                    <button th:if="${product.status == 'SOLD'}" disabled class="btn btn-secondary btn-lg rounded-pill">
-                        来晚了，已被抢走 😭
-                    </button>
+                <!-- 🔥 按钮区域：拆分为 [聊一聊] 和 [立即购买] -->
+                <div class="row g-2" th:if="${product.status == 'ON_SALE'}">
+                    <div class="col-6">
+                        <!-- 聊一聊按钮 -->
+                        <button onclick="openChatModal()" class="btn btn-outline-primary w-100 btn-lg rounded-pill">
+                            <i class="fas fa-comments"></i> 聊一聊
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <!-- 购买按钮 -->
+                        <button th:onclick="'buyNow(' + ${product.id} + ')'"
+                                class="btn btn-warning w-100 btn-lg rounded-pill fw-bold">
+                            <i class="fas fa-shopping-bag"></i> 立即购买
+                        </button>
+                    </div>
                 </div>
+
+                <button th:if="${product.status == 'SOLD'}" disabled class="btn btn-secondary btn-lg rounded-pill w-100">
+                    来晚了，已被抢走 😭
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 聊天弹窗 Modal -->
+<div class="modal fade" id="chatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">💬 发送消息给卖家</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="chatContent" class="form-control" rows="4" placeholder="你好，我对这本书感兴趣，可以便宜点吗？"></textarea>
+                <!-- 隐藏字段：存卖家ID -->
+                <input type="hidden" id="sellerId" th:value="${product.sellerId}">
+                <input type="hidden" id="productId" th:value="${product.id}">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="sendMessage()">发送</button>
             </div>
         </div>
     </div>
@@ -116,42 +119,72 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- 🔥 核心逻辑修改部分 -->
 <script>
-    function buyNow(productId) {
-        // Thymeleaf 获取后端登录状态
-        /*<![CDATA[*/
-        var isLogged = [[${#authorization.expression('isAuthenticated()')}]];
-        /*]]>*/
+    /*<![CDATA[*/
+    var isLogged = [[${#authorization.expression('isAuthenticated()')}]];
+    var currentUserId = [[${#authentication.principal instanceof T(com.wjs.secondhandbook.model.User) ? #authentication.principal.userId : -1}]];
+    // 注意：上面获取 ID 的方式取决于你的 UserDetails 实现，如果没有 userId 字段，可能需要调整
+    /*]]>*/
 
-        // 1. 如果未登录，提示并结束
+    // 1. 打开聊天窗口
+    function openChatModal() {
         if (!isLogged) {
-            alert("请先点击右上角的【登录】按钮登录后再购买！");
+            alert("请先登录！");
+            location.href = "/login";
             return;
         }
+        // 不能给自己发消息
+        var sellerId = document.getElementById('sellerId').value;
+        // 这里简单判断，如果是自己就在后端拦截，前端也可以加判断逻辑
 
-        // 2. 确认购买
-        if(!confirm('确定要购买这本书吗？\n下单后请在"个人中心"查看订单详情。')) return;
+        new bootstrap.Modal(document.getElementById('chatModal')).show();
+    }
 
-        // 3. 发送 AJAX 请求
-        fetch('/api/trade/buy/' + productId, {
-            method: 'POST'
-        })
-            .then(response => response.json())
-            .then(data => {
-                // 🔥 这里使用了 data.success 来判断
-                // 因为上一条回答中的 Controller 返回的是 {"success": true, "message": "..."}
-                if (data.success) {
-                    alert("🎉 " + data.message);
-                    // 🔥 成功后跳转页面
-                    window.location.href = "/my-profile";
-                } else {
-                    alert("❌ 购买失败: " + data.message);
-                }
+    // 2. 发送消息
+    function sendMessage() {
+        var content = document.getElementById('chatContent').value;
+        var sellerId = document.getElementById('sellerId').value;
+        var productId = document.getElementById('productId').value;
+
+        if(!content.trim()) return;
+
+        fetch('/api/message/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                receiverId: sellerId,
+                content: content,
+                productId: productId
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert("系统错误，请检查网络或联系管理员");
+        }).then(res => res.json()).then(data => {
+            if(data.success) {
+                alert("发送成功！卖家上线后会收到提醒。");
+                bootstrap.Modal.getInstance(document.getElementById('chatModal')).hide();
+                document.getElementById('chatContent').value = ''; // 清空
+            } else {
+                alert("发送失败: " + data.message);
+            }
+        });
+    }
+
+    // 3. 购买逻辑 (保持不变)
+    function buyNow(id) {
+        if (!isLogged) { alert("请先登录"); return; }
+        if(!confirm("确定购买吗？")) return;
+        fetch('/api/trade/buy/' + id, {method: 'POST'}).then(r=>r.json()).then(d=>{
+            alert(d.message);
+            if(d.success) location.href = "/my-profile";
+        });
+    }
+
+    // 4. 🔥 检查未读消息 (红点逻辑)
+    if (isLogged) {
+        fetch('/api/message/unread-count')
+            .then(r => r.json())
+            .then(d => {
+                if(d.count > 0) {
+                    document.getElementById('nav-badge').classList.remove('d-none');
+                }
             });
     }
 </script>

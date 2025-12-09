@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>消息中心</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .chat-list { height: 70vh; overflow-y: auto; border-right: 1px solid #eee; }
+    .chat-box { height: 70vh; display: flex; flex-direction: column; }
+    .messages-area { flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa; }
+    .message-bubble { max-width: 70%; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; position: relative; }
+    .msg-me { background-color: #0d6efd; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .msg-other { background-color: white; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .contact-item:hover, .contact-item.active { background-color: #f0f2f5; cursor: pointer; }
+  </style>
+</head>
+<body class="bg-white">
+
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>💌 消息中心</h3>
+    <a href="/" class="btn btn-outline-secondary btn-sm">返回市场</a>
+  </div>
+
+  <div class="card shadow-sm rounded-4 overflow-hidden" style="height: 75vh;">
+    <div class="row g-0 h-100">
+
+      <!-- 左侧：联系人列表 -->
+      <div class="col-md-4 col-lg-3 chat-list">
+        <div class="p-3 border-bottom bg-light fw-bold text-secondary">近期联系人</div>
+
+        <div th:if="${#lists.isEmpty(contacts)}" class="p-4 text-center text-muted">
+          <i class="fas fa-inbox fa-2x mb-2"></i><br>暂无消息
+        </div>
+
+        <div th:each="user : ${contacts}"
+             th:onclick="'location.href=\'/my-messages?withUser=' + ${user.userId} + '\''"
+             th:classappend="${user.userId == activeUserId} ? 'active' : ''"
+             class="contact-item p-3 border-bottom d-flex align-items-center">
+          <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+            <i class="fas fa-user"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-dark" th:text="${user.username}">User</div>
+            <small class="text-muted">点击查看记录</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：聊天区域 -->
+      <div class="col-md-8 col-lg-9 chat-box">
+        <!-- 1. 聊天记录 -->
+        <div class="messages-area d-flex flex-column" id="msgArea">
+          <div th:if="${activeUser == null}" class="text-center mt-5 text-muted">
+            <i class="fas fa-comments fa-3x mb-3"></i>
+            <p>请选择左侧联系人开始聊天</p>
+          </div>
+
+          <div th:each="msg : ${history}">
+            <!-- 别人的消息 -->
+            <div th:if="${msg.senderId != myId}" class="message-bubble msg-other">
+              <span th:text="${msg.content}">内容</span>
+              <div class="text-muted small mt-1" style="font-size: 0.7rem;"
+                   th:text="${#temporals.format(msg.createdAt, 'MM-dd HH:mm')}"></div>
+            </div>
+
+            <!-- 我的消息 -->
+            <div th:if="${msg.senderId == myId}" class="message-bubble msg-me">
+              <span th:text="${msg.content}">内容</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 输入框 (只有选了人才显示) -->
+        <div th:if="${activeUser != null}" class="p-3 bg-white border-top">
+          <div class="input-group">
+            <input type="text" id="replyInput" class="form-control" placeholder="输入消息..." onkeydown="if(event.keyCode==13) sendReply()">
+            <input type="hidden" id="targetId" th:value="${activeUser.userId}">
+            <button class="btn btn-primary" onclick="sendReply()">
+              <i class="fas fa-paper-plane"></i> 发送
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 自动滚动到底部
+  var msgArea = document.getElementById("msgArea");
+  if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
+
+  function sendReply() {
+    var content = document.getElementById('replyInput').value;
+    var targetId = document.getElementById('targetId').value;
+    if(!content.trim()) return;
+
+    fetch('/api/message/send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        receiverId: targetId,
+        content: content
+      })
+    }).then(res => res.json()).then(data => {
+      if(data.success) {
+        location.reload(); // 简单粗暴：刷新页面显示新消息
+      } else {
+        alert("发送失败");
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
