@@ -65,30 +65,31 @@ public class ProductController {
 
         // 3. 处理图片上传
         if (!multipartFile.isEmpty()) {
-            // 获取项目根目录下的 static/images 路径
-            // 注意：这里为了演示简单，通过获取 classpath 路径处理
-            // 实际生产环境通常配置外部路径映射
+            // --- 修改开始 ---
 
-            String fileName = multipartFile.getOriginalFilename();
-            // 这里我们尝试保存到 target/classes/static/images (运行时目录)
-            // 这样不用重启就能看到图片
-            File path = new File(ResourceUtils.getURL("classpath:").getPath());
-            if(!path.exists()) path = new File("");
-            File uploadDir = new File(path.getAbsolutePath(), "static/images/");
+            // 1. 定义文件存储的物理路径：项目根目录/uploads/
+            // System.getProperty("user.dir") 获取项目根路径
+            String projectPath = System.getProperty("user.dir");
+            String uploadDir = projectPath + "/uploads/"; // 注意这里不需要 "file:" 前缀，这是给 Java IO 用的物理路径
 
-            if(!uploadDir.exists()) uploadDir.mkdirs();
+            // 确保目录存在
+            File dir = new File(uploadDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
 
-            String uploadPath = uploadDir.getAbsolutePath();
+            // 2. 调用工具类保存文件 (工具类不需要改，它只负责把流写入路径)
+            String savedName = FileUploadUtil.saveFile(uploadDir, multipartFile);
 
-            // 调用工具类保存
-            String savedName = FileUploadUtil.saveFile(uploadPath, multipartFile);
-
-            // 设置数据库路径 (前端访问路径)
+            // 3. 设置数据库路径
+            // 因为我们在 WebMvcConfig 里把 /images/** 映射到了 uploads 目录
+            // 所以数据库存 "images/文件名"，前端访问 "/images/文件名" 就能被映射到 uploads 下的文件
             product.setImageUrl("images/" + savedName);
+
+            // --- 修改结束 ---
         }
 
         productRepository.save(product);
-
         return "redirect:/my-shelf";
     }
 
