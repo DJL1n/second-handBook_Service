@@ -1,6 +1,8 @@
 package com.wjs.secondhandbook.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -19,5 +21,23 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 逻辑是：先去外面的 uploads 找 -> 找不到就去 classpath 下的 static/images 找
         registry.addResourceHandler("/images/**")
                 .addResourceLocations(uploadPath, "classpath:/static/images/");
+    }
+
+    @Autowired
+    private UserActivityInterceptor userActivityInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // 注册拦截器
+        registry.addInterceptor(userActivityInterceptor)
+                .addPathPatterns("/**") // 拦截所有路径
+                .excludePathPatterns(   // 排除不需要记录状态的静态资源路径
+                        "/css/**",
+                        "/js/**",
+                        "/images/**",
+                        "/login",
+                        "/register",
+                        "/error"
+                );
     }
 }

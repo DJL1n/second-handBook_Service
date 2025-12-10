@@ -23,4 +23,7 @@ public interface MessageRepository extends CrudRepository<Message, Integer> {
 
     @Query("SELECT DISTINCT receiver_id FROM messages WHERE sender_id = :myId")
     List<Integer> findReceivers(Integer myId);
+
+    @Query("SELECT COUNT(*) FROM messages WHERE sender_id = :senderId AND receiver_id = :receiverId AND is_read = 0")
+    Long countUnread(Integer senderId, Integer receiverId);
 }

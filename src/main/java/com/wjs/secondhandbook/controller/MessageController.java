@@ -96,11 +96,25 @@ public class MessageController {
         contactsIterable.forEach(contacts::add);
         model.addAttribute("contacts", contacts);
 
+        // 🔥🔥🔥 新增逻辑开始：计算每个联系人的未读数
+        Map<Integer, Long> unreadCounts = new HashMap<>();
+        for (User contact : contacts) {
+            // 查出这个联系人(contact.userId)发给我(me.getUserId())的未读数
+            Long count = messageRepository.countUnread(contact.getUserId(), me.getUserId());
+            unreadCounts.put(contact.getUserId(), count);
+        }
+        model.addAttribute("unreadCounts", unreadCounts); // 放入 Model 传给前端
+        // 🔥🔥🔥 新增逻辑结束
+
+
         // 2. 如果指定了聊天对象
         if (withUser != null) {
             List<Message> history = messageRepository.findConversation(me.getUserId(), withUser);
             model.addAttribute("history", history);
             model.addAttribute("activeUserId", withUser);
+
+            // 获取当前聊天对象信息
+            userRepository.findById(withUser).ifPresent(u -> model.addAttribute("activeUser", u));
 
             // 设为已读 (保持不变)
             for(Message m : history) {

@@ -20,6 +20,7 @@ create table if not exists users
     password varchar(100)               not null,
     enabled  tinyint(1)  default 1      null,
     role     varchar(20) default 'USER' null,
+    last_active_at DATETIME DEFAULT NULL COMMENT '最后活跃时间',
     constraint username
         unique (username)
 );
