@@ -39,6 +39,20 @@ create table if not exists products
         foreign key (seller_id) references users (user_id)
 );
 
+create table if not exists messages
+(
+    id          int auto_increment
+        primary key,
+    sender_id   int                  not null comment '发送者ID',
+    receiver_id int                  not null comment '接收者ID',
+    product_id  int                  null comment '关联商品ID',
+    content     text                 null comment '消息内容',
+    created_at  datetime             null comment '发送时间',
+    is_read     tinyint(1) default 0 null comment '是否已读'
+);
+
+
+
 create index seller_id
     on products (seller_id);
 

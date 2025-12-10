@@ -91,6 +91,18 @@
 
         <!-- 右侧按钮 -->
         <div class="d-flex align-items-center auth-btns">
+
+            <!-- 1. 新增：消息入口 (仅登录可见) -->
+            <div sec:authorize="isAuthenticated()" class="me-3">
+                <a href="/my-messages" class="text-secondary position-relative text-decoration-none">
+                    <i class="fas fa-comment-dots fa-lg"></i>
+                    <!-- 红点：默认隐藏 (d-none) -->
+                    <span id="nav-badge" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none">
+                <span class="visually-hidden">New alerts</span>
+            </span>
+                </a>
+            </div>
+
             <!-- 未登录 -->
             <div sec:authorize="!isAuthenticated()">
                 <button class="btn btn-outline-primary rounded-pill px-4 me-2 btn-sm" onclick="showLoginModal()">登录</button>
@@ -298,6 +310,29 @@
                 errorDiv.style.display = 'block';
             });
     });
+    // 🔥 全局消息轮询逻辑
+    function checkUnread() {
+        /*<![CDATA[*/
+        var isLogged = [[${#authorization.expression('isAuthenticated()')}]];
+        /*]]>*/
+
+        if(isLogged) {
+            fetch('/api/message/unread-count')
+                .then(r => r.json())
+                .then(d => {
+                    const badge = document.getElementById('nav-badge');
+                    if(d.count > 0) {
+                        badge.classList.remove('d-none');
+                    } else {
+                        badge.classList.add('d-none');
+                    }
+                });
+        }
+    }
+
+    // 页面加载后查一次，之后每 10 秒查一次
+    checkUnread();
+    setInterval(checkUnread, 10000);
 </script>
 
 </body>
