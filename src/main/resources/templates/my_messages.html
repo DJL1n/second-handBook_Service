@@ -49,15 +49,67 @@
       </div>
 
       <!-- 右侧：聊天区域 -->
-      <div class="col-md-8 col-lg-9 chat-box">
-        <!-- 1. 聊天记录 -->
-        <div class="messages-area d-flex flex-column" id="msgArea">
+      <!-- 右侧：聊天区域 -->
+      <div class="col-md-8 col-lg-9 chat-box position-relative">
+
+        <!-- 🔥 1. 顶部悬停栏 (包含昵称 + 商品卡片) -->
+        <div th:if="${activeUser != null}" class="chat-header border-bottom bg-white shadow-sm z-3" style="z-index: 10;">
+          <!-- A. 对方昵称栏 -->
+          <div class="p-3 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                <span th:text="${#strings.substring(activeUser.username,0,1).toUpperCase()}">U</span>
+              </div>
+              <div>
+                <h5 class="mb-0 fw-bold" th:text="${activeUser.username}">用户名</h5>
+                <small class="text-muted"><i class="fas fa-circle text-success" style="font-size: 8px;"></i> 在线</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- B. 商品悬停卡片 (只有 currentProduct 存在时才显示) -->
+          <div th:if="${currentProduct != null}" class="alert alert-light m-2 border d-flex align-items-center justify-content-between p-2 rounded-3" role="alert">
+            <div class="d-flex align-items-center">
+              <!-- 商品图 -->
+              <img th:src="${(currentProduct.imageUrl == null || #strings.isEmpty(currentProduct.imageUrl))
+                            ? 'https://picsum.photos/100/100?random=' + currentProduct.id
+                            : (currentProduct.imageUrl.startsWith('http') ? currentProduct.imageUrl : '/' + currentProduct.imageUrl)}"
+                   class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
+
+              <!-- 商品信息 -->
+              <div>
+                <div class="fw-bold text-truncate" style="max-width: 200px;" th:text="${currentProduct.title}">商品标题</div>
+                <div class="text-danger fw-bold">¥ <span th:text="${currentProduct.price}"></span></div>
+              </div>
+            </div>
+
+            <!-- 购买按钮 (仅当商品在售时显示) -->
+            <div th:if="${currentProduct.status == 'ON_SALE'}">
+              <!-- 判断：如果我是卖家，显示'我的商品'；如果是买家，显示'立即购买' -->
+              <span th:if="${currentProduct.sellerId == myId}" class="badge bg-secondary">我发布的商品</span>
+
+              <button th:if="${currentProduct.sellerId != myId}"
+                      th:onclick="'buyNow(' + ${currentProduct.id} + ')'"
+                      class="btn btn-warning btn-sm rounded-pill fw-bold px-3">
+                立即购买
+              </button>
+            </div>
+
+            <div th:if="${currentProduct.status == 'SOLD'}">
+              <span class="badge bg-secondary">已售出</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🔥 2. 聊天记录 (增加 flex-grow-1 让它占据剩余空间) -->
+        <div class="messages-area d-flex flex-column flex-grow-1" id="msgArea">
           <div th:if="${activeUser == null}" class="text-center mt-5 text-muted">
             <i class="fas fa-comments fa-3x mb-3"></i>
             <p>请选择左侧联系人开始聊天</p>
           </div>
 
-          <div th:each="msg : ${history}">
+          <!-- 只有在 activeUser 不为空时才渲染历史记录 -->
+          <div th:if="${activeUser != null}" th:each="msg : ${history}">
             <!-- 别人的消息 -->
             <div th:if="${msg.senderId != myId}" class="message-bubble msg-other">
               <span th:text="${msg.content}">内容</span>
@@ -72,17 +124,20 @@
           </div>
         </div>
 
-        <!-- 2. 输入框 (只有选了人才显示) -->
+        <!-- 3. 输入框 (保持不变) -->
         <div th:if="${activeUser != null}" class="p-3 bg-white border-top">
           <div class="input-group">
             <input type="text" id="replyInput" class="form-control" placeholder="输入消息..." onkeydown="if(event.keyCode==13) sendReply()">
+            <!-- 这里可以稍微改进，如果当前有 currentProduct，回复时默认带上商品ID，方便下次进入 -->
             <input type="hidden" id="targetId" th:value="${activeUser.userId}">
+            <input type="hidden" id="currentProductId" th:value="${currentProduct != null ? currentProduct.id : ''}">
             <button class="btn btn-primary" onclick="sendReply()">
               <i class="fas fa-paper-plane"></i> 发送
             </button>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -92,27 +147,53 @@
   var msgArea = document.getElementById("msgArea");
   if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
 
+  // 1. 发送消息逻辑 (更新版)
   function sendReply() {
     var content = document.getElementById('replyInput').value;
     var targetId = document.getElementById('targetId').value;
+    // 获取当前悬停卡片的商品ID，这样发送的消息也会关联这个商品
+    var productId = document.getElementById('currentProductId') ? document.getElementById('currentProductId').value : null;
+
     if(!content.trim()) return;
+
+    var payload = {
+      receiverId: targetId,
+      content: content
+    };
+    // 如果有商品ID，带上它
+    if(productId) {
+      payload.productId = productId;
+    }
 
     fetch('/api/message/send', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        receiverId: targetId,
-        content: content
-      })
+      body: JSON.stringify(payload)
     }).then(res => res.json()).then(data => {
       if(data.success) {
-        location.reload(); // 简单粗暴：刷新页面显示新消息
+        location.reload();
       } else {
         alert("发送失败");
       }
     });
   }
+
+  // 2. 🔥 新增：立即购买逻辑 (直接复制 product_detail.html 的逻辑)
+  function buyNow(id) {
+    if(!confirm("确定购买此商品吗？")) return;
+
+    fetch('/api/trade/buy/' + id, {method: 'POST'})
+            .then(r => r.json())
+            .then(d => {
+              alert(d.message);
+              if(d.success) {
+                // 购买成功后，跳转到个人中心
+                location.href = "/my-profile";
+              }
+            });
+  }
 </script>
+
 
 </body>
 </html>

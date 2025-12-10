@@ -3,7 +3,9 @@ package com.wjs.secondhandbook.controller;
 import com.wjs.secondhandbook.model.Message;
 import com.wjs.secondhandbook.model.User;
 import com.wjs.secondhandbook.repository.MessageRepository;
+import com.wjs.secondhandbook.repository.ProductRepository;
 import com.wjs.secondhandbook.repository.UserRepository;
+import com.wjs.secondhandbook.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -19,6 +21,7 @@ public class MessageController {
 
     @Autowired private MessageRepository messageRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private ProductRepository productRepository;
 
     /**
      * API: 发送消息
@@ -79,28 +82,27 @@ public class MessageController {
      * logic: 找出所有和我聊过天的人，展示列表
      */
     @GetMapping("/my-messages")
-    public String messagePage(@RequestParam(required = false) Integer withUser, Model model, Authentication auth) {
+    public String messagePage(@RequestParam(required = false) Integer withUser,
+                              @RequestParam(required = false) Integer productId, // 🔥 2. 允许前端显式传 productId
+                              Model model, Authentication auth) {
         User me = userRepository.findByUsername(auth.getName()).orElseThrow();
 
-        // 1. 找出所有联系人 ID (合并 发给我的 和 我发给的)
+        // 1. 找出所有联系人 (保持不变)
         Set<Integer> contactIds = new HashSet<>();
         contactIds.addAll(messageRepository.findSenders(me.getUserId()));
         contactIds.addAll(messageRepository.findReceivers(me.getUserId()));
-
-        // 2. 查出这些 User 对象
         Iterable<User> contactsIterable = userRepository.findAllById(contactIds);
         List<User> contacts = new ArrayList<>();
         contactsIterable.forEach(contacts::add);
-
         model.addAttribute("contacts", contacts);
 
-        // 3. 如果指定了聊天对象 (withUser)，加载聊天记录
+        // 2. 如果指定了聊天对象
         if (withUser != null) {
             List<Message> history = messageRepository.findConversation(me.getUserId(), withUser);
             model.addAttribute("history", history);
             model.addAttribute("activeUserId", withUser);
 
-            // 顺便把对方发给我的未读消息设为已读
+            // 设为已读 (保持不变)
             for(Message m : history) {
                 if(m.getReceiverId().equals(me.getUserId()) && !m.getIsRead()) {
                     m.setIsRead(true);
@@ -108,8 +110,30 @@ public class MessageController {
                 }
             }
 
-            // 获取当前聊天对象的信息
+            // 获取当前聊天对象信息
             userRepository.findById(withUser).ifPresent(u -> model.addAttribute("activeUser", u));
+
+            // 🔥 3. 核心逻辑：查找关联商品
+            // 优先级 A: URL 参数指定了 productId (例如从详情页跳转过来)
+            // 优先级 B: 聊天记录中最新的那条带 productId 的消息
+            Integer targetProductId = productId;
+
+            if (targetProductId == null && !history.isEmpty()) {
+                // 倒序遍历历史记录，找到最近一个有关联商品的消息
+                for (int i = history.size() - 1; i >= 0; i--) {
+                    if (history.get(i).getProductId() != null) {
+                        targetProductId = history.get(i).getProductId();
+                        break;
+                    }
+                }
+            }
+
+            // 如果找到了商品ID，查出详情放进 Model
+            if (targetProductId != null) {
+                productRepository.findById(targetProductId).ifPresent(p -> {
+                    model.addAttribute("currentProduct", p);
+                });
+            }
         }
 
         model.addAttribute("myId", me.getUserId());
