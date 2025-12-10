@@ -9,9 +9,12 @@
     .chat-list { height: 70vh; overflow-y: auto; border-right: 1px solid #eee; }
     .chat-box { height: 70vh; display: flex; flex-direction: column; }
     .messages-area { flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa; }
+
+    /* 消息气泡样式调整 */
     .message-bubble { max-width: 70%; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; position: relative; }
     .msg-me { background-color: #0d6efd; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
     .msg-other { background-color: white; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 2px; }
+
     .contact-item:hover, .contact-item.active { background-color: #f0f2f5; cursor: pointer; }
   </style>
 </head>
@@ -34,13 +37,12 @@
           <i class="fas fa-inbox fa-2x mb-2"></i><br>暂无消息
         </div>
 
-        <!-- 🔥 修改点 1：增加 justify-content-between 让红点靠右，并增加红点逻辑 -->
+        <!-- 联系人循环 -->
         <div th:each="user : ${contacts}"
              th:onclick="'location.href=\'/my-messages?withUser=' + ${user.userId} + '\''"
              th:classappend="${user.userId == activeUserId} ? 'active' : ''"
              class="contact-item p-3 border-bottom d-flex align-items-center justify-content-between">
 
-          <!-- 左边：头像和名字 -->
           <div class="d-flex align-items-center">
             <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
               <span th:text="${#strings.substring(user.username,0,1).toUpperCase()}">U</span>
@@ -51,78 +53,60 @@
             </div>
           </div>
 
-          <!-- 右边：未读红点 (仅当数量 > 0 时显示) -->
+          <!-- 左侧红点：别人发给我的未读消息数 -->
           <span th:if="${unreadCounts != null and unreadCounts.get(user.userId) > 0}"
                 class="badge bg-danger rounded-pill"
                 th:text="${unreadCounts.get(user.userId)}">
           </span>
-
         </div>
       </div>
 
       <!-- 右侧：聊天区域 -->
       <div class="col-md-8 col-lg-9 chat-box position-relative">
 
-        <!-- 顶部悬停栏 (包含昵称 + 商品卡片) -->
+        <!-- 顶部 Header -->
         <div th:if="${activeUser != null}" class="chat-header border-bottom bg-white shadow-sm z-3" style="z-index: 10;">
-          <!-- A. 对方昵称栏 -->
           <div class="p-3 d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
               <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
                 <span th:text="${#strings.substring(activeUser.username,0,1).toUpperCase()}">U</span>
               </div>
 
-              <!-- 🔥 修改点 2：真实在线状态显示 -->
+              <!-- 在线状态 -->
               <div>
                 <h5 class="mb-0 fw-bold" th:text="${activeUser.username}">用户名</h5>
-
-                <!-- 在线：显示绿灯 -->
                 <small th:if="${activeUser.isOnline()}" class="text-muted">
                   <i class="fas fa-circle text-success" style="font-size: 8px;"></i> 在线
                 </small>
-
-                <!-- 离线：显示灰灯 + 最后时间 -->
                 <small th:unless="${activeUser.isOnline()}" class="text-muted">
                   <i class="fas fa-circle text-secondary" style="font-size: 8px;"></i>
-                  <span th:text="${activeUser.lastActiveAt == null ? '离线' : #temporals.format(activeUser.lastActiveAt, 'MM-dd HH:mm') + ' 在线'}"></span>
+                  <span th:text="${activeUser.lastActiveAt == null ? '离线' : #temporals.format(activeUser.lastActiveAt, 'MM-dd HH:mm') + '在线'}"></span>
                 </small>
               </div>
             </div>
           </div>
 
-          <!-- B. 商品悬停卡片 (保持不变) -->
+          <!-- 商品卡片 -->
           <div th:if="${currentProduct != null}" class="alert alert-light m-2 border d-flex align-items-center justify-content-between p-2 rounded-3" role="alert">
             <div class="d-flex align-items-center">
-              <!-- 商品图 -->
               <img th:src="${(currentProduct.imageUrl == null || #strings.isEmpty(currentProduct.imageUrl))
                             ? 'https://picsum.photos/100/100?random=' + currentProduct.id
                             : (currentProduct.imageUrl.startsWith('http') ? currentProduct.imageUrl : '/' + currentProduct.imageUrl)}"
                    class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
-
-              <!-- 商品信息 -->
               <div>
                 <div class="fw-bold text-truncate" style="max-width: 200px;" th:text="${currentProduct.title}">商品标题</div>
                 <div class="text-danger fw-bold">¥ <span th:text="${currentProduct.price}"></span></div>
               </div>
             </div>
-
-            <!-- 购买按钮 -->
             <div th:if="${currentProduct.status == 'ON_SALE'}">
               <span th:if="${currentProduct.sellerId == myId}" class="badge bg-secondary">我发布的商品</span>
-              <button th:if="${currentProduct.sellerId != myId}"
-                      th:onclick="'buyNow(' + ${currentProduct.id} + ')'"
-                      class="btn btn-warning btn-sm rounded-pill fw-bold px-3">
-                立即购买
-              </button>
+              <button th:if="${currentProduct.sellerId != myId}" th:onclick="'buyNow(' + ${currentProduct.id} + ')'" class="btn btn-warning btn-sm rounded-pill fw-bold px-3">立即购买</button>
             </div>
-
-            <div th:if="${currentProduct.status == 'SOLD'}">
-              <span class="badge bg-secondary">已售出</span>
-            </div>
+            <div th:if="${currentProduct.status == 'SOLD'}"><span class="badge bg-secondary">已售出</span></div>
           </div>
         </div>
 
-        <!-- 聊天记录区域 (保持不变) -->
+        <!-- 聊天记录区域 -->
         <div class="messages-area d-flex flex-column flex-grow-1" id="msgArea">
           <div th:if="${activeUser == null}" class="text-center mt-5 text-muted">
             <i class="fas fa-comments fa-3x mb-3"></i>
@@ -130,19 +114,34 @@
           </div>
 
           <div th:if="${activeUser != null}" th:each="msg : ${history}">
+
+            <!-- A. 别人的消息 (左侧) -->
             <div th:if="${msg.senderId != myId}" class="message-bubble msg-other">
               <span th:text="${msg.content}">内容</span>
               <div class="text-muted small mt-1" style="font-size: 0.7rem;"
                    th:text="${#temporals.format(msg.createdAt, 'MM-dd HH:mm')}"></div>
             </div>
 
+            <!-- B. 我的消息 (右侧) - 🔥🔥🔥 修改了这里 -->
             <div th:if="${msg.senderId == myId}" class="message-bubble msg-me">
+              <!-- 内容 -->
               <span th:text="${msg.content}">内容</span>
+
+              <!-- 状态栏：时间 + 已读/未读 -->
+              <div class="d-flex justify-content-end align-items-center mt-1" style="font-size: 0.7rem; opacity: 0.8;">
+                <!-- 时间 -->
+                <span th:text="${#temporals.format(msg.createdAt, 'MM-dd HH:mm')}" class="me-2"></span>
+
+                <!-- 已读/未读状态 -->
+                <span th:if="${msg.isRead}">已读</span>
+                <span th:unless="${msg.isRead}">未读</span>
+              </div>
             </div>
+
           </div>
         </div>
 
-        <!-- 输入框区域 (保持不变) -->
+        <!-- 输入框 -->
         <div th:if="${activeUser != null}" class="p-3 bg-white border-top">
           <div class="input-group">
             <input type="text" id="replyInput" class="form-control" placeholder="输入消息..." onkeydown="if(event.keyCode==13) sendReply()">
@@ -160,11 +159,9 @@
 </div>
 
 <script>
-  // 自动滚动到底部
   var msgArea = document.getElementById("msgArea");
   if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
 
-  // 发送消息
   function sendReply() {
     var content = document.getElementById('replyInput').value;
     var targetId = document.getElementById('targetId').value;
@@ -172,38 +169,25 @@
 
     if(!content.trim()) return;
 
-    var payload = {
-      receiverId: targetId,
-      content: content
-    };
-    if(productId) {
-      payload.productId = productId;
-    }
+    var payload = { receiverId: targetId, content: content };
+    if(productId) payload.productId = productId;
 
     fetch('/api/message/send', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)
     }).then(res => res.json()).then(data => {
-      if(data.success) {
-        location.reload();
-      } else {
-        alert("发送失败");
-      }
+      if(data.success) location.reload(); else alert("发送失败");
     });
   }
 
-  // 立即购买
   function buyNow(id) {
     if(!confirm("确定购买此商品吗？")) return;
-
     fetch('/api/trade/buy/' + id, {method: 'POST'})
             .then(r => r.json())
             .then(d => {
               alert(d.message);
-              if(d.success) {
-                location.href = "/my-profile";
-              }
+              if(d.success) location.href = "/my-profile";
             });
   }
 </script>
