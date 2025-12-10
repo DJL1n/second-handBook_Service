@@ -34,24 +34,36 @@
           <i class="fas fa-inbox fa-2x mb-2"></i><br>暂无消息
         </div>
 
+        <!-- 🔥 修改点 1：增加 justify-content-between 让红点靠右，并增加红点逻辑 -->
         <div th:each="user : ${contacts}"
              th:onclick="'location.href=\'/my-messages?withUser=' + ${user.userId} + '\''"
              th:classappend="${user.userId == activeUserId} ? 'active' : ''"
-             class="contact-item p-3 border-bottom d-flex align-items-center">
-          <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
-            <i class="fas fa-user"></i>
+             class="contact-item p-3 border-bottom d-flex align-items-center justify-content-between">
+
+          <!-- 左边：头像和名字 -->
+          <div class="d-flex align-items-center">
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+              <span th:text="${#strings.substring(user.username,0,1).toUpperCase()}">U</span>
+            </div>
+            <div>
+              <div class="fw-bold text-dark" th:text="${user.username}">User</div>
+              <small class="text-muted">点击查看记录</small>
+            </div>
           </div>
-          <div>
-            <div class="fw-bold text-dark" th:text="${user.username}">User</div>
-            <small class="text-muted">点击查看记录</small>
-          </div>
+
+          <!-- 右边：未读红点 (仅当数量 > 0 时显示) -->
+          <span th:if="${unreadCounts != null and unreadCounts.get(user.userId) > 0}"
+                class="badge bg-danger rounded-pill"
+                th:text="${unreadCounts.get(user.userId)}">
+          </span>
+
         </div>
       </div>
 
       <!-- 右侧：聊天区域 -->
       <div class="col-md-8 col-lg-9 chat-box position-relative">
 
-        <!-- 🔥 1. 顶部悬停栏 (包含昵称 + 商品卡片) -->
+        <!-- 顶部悬停栏 (包含昵称 + 商品卡片) -->
         <div th:if="${activeUser != null}" class="chat-header border-bottom bg-white shadow-sm z-3" style="z-index: 10;">
           <!-- A. 对方昵称栏 -->
           <div class="p-3 d-flex align-items-center justify-content-between">
@@ -59,14 +71,26 @@
               <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
                 <span th:text="${#strings.substring(activeUser.username,0,1).toUpperCase()}">U</span>
               </div>
+
+              <!-- 🔥 修改点 2：真实在线状态显示 -->
               <div>
                 <h5 class="mb-0 fw-bold" th:text="${activeUser.username}">用户名</h5>
-                <small class="text-muted"><i class="fas fa-circle text-success" style="font-size: 8px;"></i> 在线</small>
+
+                <!-- 在线：显示绿灯 -->
+                <small th:if="${activeUser.isOnline()}" class="text-muted">
+                  <i class="fas fa-circle text-success" style="font-size: 8px;"></i> 在线
+                </small>
+
+                <!-- 离线：显示灰灯 + 最后时间 -->
+                <small th:unless="${activeUser.isOnline()}" class="text-muted">
+                  <i class="fas fa-circle text-secondary" style="font-size: 8px;"></i>
+                  <span th:text="${activeUser.lastActiveAt == null ? '离线' : #temporals.format(activeUser.lastActiveAt, 'MM-dd HH:mm') + ' 在线'}"></span>
+                </small>
               </div>
             </div>
           </div>
 
-          <!-- B. 商品悬停卡片 (只有 currentProduct 存在时才显示) -->
+          <!-- B. 商品悬停卡片 (保持不变) -->
           <div th:if="${currentProduct != null}" class="alert alert-light m-2 border d-flex align-items-center justify-content-between p-2 rounded-3" role="alert">
             <div class="d-flex align-items-center">
               <!-- 商品图 -->
@@ -82,11 +106,9 @@
               </div>
             </div>
 
-            <!-- 购买按钮 (仅当商品在售时显示) -->
+            <!-- 购买按钮 -->
             <div th:if="${currentProduct.status == 'ON_SALE'}">
-              <!-- 判断：如果我是卖家，显示'我的商品'；如果是买家，显示'立即购买' -->
               <span th:if="${currentProduct.sellerId == myId}" class="badge bg-secondary">我发布的商品</span>
-
               <button th:if="${currentProduct.sellerId != myId}"
                       th:onclick="'buyNow(' + ${currentProduct.id} + ')'"
                       class="btn btn-warning btn-sm rounded-pill fw-bold px-3">
@@ -100,34 +122,30 @@
           </div>
         </div>
 
-        <!-- 🔥 2. 聊天记录 (增加 flex-grow-1 让它占据剩余空间) -->
+        <!-- 聊天记录区域 (保持不变) -->
         <div class="messages-area d-flex flex-column flex-grow-1" id="msgArea">
           <div th:if="${activeUser == null}" class="text-center mt-5 text-muted">
             <i class="fas fa-comments fa-3x mb-3"></i>
             <p>请选择左侧联系人开始聊天</p>
           </div>
 
-          <!-- 只有在 activeUser 不为空时才渲染历史记录 -->
           <div th:if="${activeUser != null}" th:each="msg : ${history}">
-            <!-- 别人的消息 -->
             <div th:if="${msg.senderId != myId}" class="message-bubble msg-other">
               <span th:text="${msg.content}">内容</span>
               <div class="text-muted small mt-1" style="font-size: 0.7rem;"
                    th:text="${#temporals.format(msg.createdAt, 'MM-dd HH:mm')}"></div>
             </div>
 
-            <!-- 我的消息 -->
             <div th:if="${msg.senderId == myId}" class="message-bubble msg-me">
               <span th:text="${msg.content}">内容</span>
             </div>
           </div>
         </div>
 
-        <!-- 3. 输入框 (保持不变) -->
+        <!-- 输入框区域 (保持不变) -->
         <div th:if="${activeUser != null}" class="p-3 bg-white border-top">
           <div class="input-group">
             <input type="text" id="replyInput" class="form-control" placeholder="输入消息..." onkeydown="if(event.keyCode==13) sendReply()">
-            <!-- 这里可以稍微改进，如果当前有 currentProduct，回复时默认带上商品ID，方便下次进入 -->
             <input type="hidden" id="targetId" th:value="${activeUser.userId}">
             <input type="hidden" id="currentProductId" th:value="${currentProduct != null ? currentProduct.id : ''}">
             <button class="btn btn-primary" onclick="sendReply()">
@@ -146,11 +164,10 @@
   var msgArea = document.getElementById("msgArea");
   if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
 
-  // 1. 发送消息逻辑 (更新版)
+  // 发送消息
   function sendReply() {
     var content = document.getElementById('replyInput').value;
     var targetId = document.getElementById('targetId').value;
-    // 获取当前悬停卡片的商品ID，这样发送的消息也会关联这个商品
     var productId = document.getElementById('currentProductId') ? document.getElementById('currentProductId').value : null;
 
     if(!content.trim()) return;
@@ -159,7 +176,6 @@
       receiverId: targetId,
       content: content
     };
-    // 如果有商品ID，带上它
     if(productId) {
       payload.productId = productId;
     }
@@ -177,7 +193,7 @@
     });
   }
 
-  // 2. 🔥 新增：立即购买逻辑 (直接复制 product_detail.html 的逻辑)
+  // 立即购买
   function buyNow(id) {
     if(!confirm("确定购买此商品吗？")) return;
 
@@ -186,13 +202,11 @@
             .then(d => {
               alert(d.message);
               if(d.success) {
-                // 购买成功后，跳转到个人中心
                 location.href = "/my-profile";
               }
             });
   }
 </script>
-
 
 </body>
 </html>
