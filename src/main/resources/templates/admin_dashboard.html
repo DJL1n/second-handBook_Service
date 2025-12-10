@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>管理员后台</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+
+<div class="container bg-white p-4 rounded shadow-sm">
+  <h2 class="mb-4">🛡️ 管理员控制台</h2>
+
+  <!-- 1. 退货审核区 -->
+  <h4 class="text-danger border-bottom pb-2">📦 退货申请审核</h4>
+  <table class="table table-striped mb-5">
+    <thead><tr><th>订单ID</th><th>退货理由</th><th>操作</th></tr></thead>
+    <tbody>
+    <tr th:each="order : ${returnOrders}">
+      <td th:text="${order.id}">1</td>
+      <td th:text="${order.returnReason}" class="text-danger fw-bold">理由</td>
+      <td>
+        <button class="btn btn-sm btn-success" th:onclick="'audit(' + ${order.id} + ', \'agree\')'">同意退货</button>
+        <button class="btn btn-sm btn-secondary" th:onclick="'audit(' + ${order.id} + ', \'reject\')'">拒绝</button>
+      </td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(returnOrders)}"><td colspan="3" class="text-muted text-center">无待审核申请</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 2. 商品管理区 -->
+  <h4 class="text-primary border-bottom pb-2 mt-4">🛍️ 所有商品管理</h4>
+  <table class="table table-hover">
+    <thead><tr><th>ID</th><th>标题</th><th>卖家</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>
+    <tr th:each="prod : ${products}">
+      <td th:text="${prod.id}"></td>
+      <td th:text="${prod.title}"></td>
+      <td th:text="${prod.sellerId}"></td>
+      <td>
+                    <span th:text="${prod.status}"
+                          th:classappend="${prod.status == 'BANNED'} ? 'text-danger' : 'text-success'"></span>
+      </td>
+      <td>
+        <button th:if="${prod.status != 'BANNED'}"
+                th:onclick="'banProduct(' + ${prod.id} + ')'"
+                class="btn btn-sm btn-outline-danger">违规下架</button>
+        <span th:if="${prod.status == 'BANNED'}" class="text-danger small">已封禁</span>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  function audit(id, action) {
+    if(!confirm("确定执行此操作吗？")) return;
+    fetch('/admin/audit/' + id + '?action=' + action, {method: 'POST'})
+            .then(r => r.json()).then(d => { alert(d.message); location.reload(); });
+  }
+
+  function banProduct(id) {
+    if(!confirm("确定强制下架此商品吗？")) return;
+    fetch('/admin/product/ban/' + id, {method: 'POST'})
+            .then(r => r.json()).then(d => { alert(d.message); location.reload(); });
+  }
+</script>
+</body>
+</html>

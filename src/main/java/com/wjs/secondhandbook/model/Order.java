@@ -28,4 +28,5 @@ public class Order {
     // 建议在 Java 层控制时间，比依赖数据库默认值更稳妥
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String returnReason;
 }

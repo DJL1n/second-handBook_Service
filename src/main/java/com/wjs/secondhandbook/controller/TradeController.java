@@ -141,4 +141,29 @@ public class TradeController {
             return error("系统错误: " + e.getMessage());
         }
     }
+
+    @PostMapping("/return/{id}")
+    @ResponseBody
+    public Map<String, Object> requestReturn(@PathVariable Integer id, @RequestBody Map<String, String> payload, Authentication auth) {
+        User me = userRepository.findByUsername(auth.getName()).orElseThrow();
+        Order order = orderRepository.findById(id).orElseThrow();
+
+        if (!order.getBuyerId().equals(me.getUserId())) {
+            return Map.of("success", false, "message", "无权操作");
+        }
+
+        // 只有“待收货”状态才能申请退货
+        if (!"WAIT_RECEIVE".equals(order.getStatus())) {
+            return Map.of("success", false, "message", "当前状态无法申请退货");
+        }
+
+        // 1. 修改状态为退货申请中
+        order.setStatus("RETURN_REQUESTED");
+        // 2. 写入理由
+        order.setReturnReason(payload.get("reason"));
+        orderRepository.save(order);
+
+        return Map.of("success", true, "message", "退货申请已提交，等待管理员审核");
+    }
+
 }

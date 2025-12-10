@@ -46,11 +46,25 @@
                         <span th:if="${order.status == 'CANCELLED'}" class="badge bg-danger">已取消</span>
                     </td>
                     <td>
-                        <!-- 操作按钮区域 -->
+                        <!-- 确认收货 (保持不变) -->
                         <button th:if="${order.status == 'WAIT_RECEIVE'}"
                                 th:onclick="'confirmReceive(' + ${order.id} + ')'"
                                 class="btn btn-success btn-sm">确认收货</button>
 
+                        <!-- 🔥 新增：申请退货按钮 (只有待收货状态显示) -->
+                        <button th:if="${order.status == 'WAIT_RECEIVE'}"
+                                th:onclick="'openReturnModal(' + ${order.id} + ')'"
+                                class="btn btn-outline-danger btn-sm ms-1">
+                            退货
+                        </button>
+
+                        <!-- 显示状态 -->
+                        <span th:if="${order.status == 'RETURN_REQUESTED'}" class="badge bg-warning text-dark">
+                            <i class="fas fa-clock"></i> 退货审核中
+                        </span>
+                        <span th:if="${order.status == 'REFUNDED'}" class="badge bg-secondary">
+                            <i class="fas fa-undo"></i> 已退款
+                        </span>
                         <span th:if="${order.status == 'WAIT_SHIP'}" class="text-muted small">等待卖家发货...</span>
 
                         <!-- ✅ 新增：取消后的提示文案 -->
@@ -106,6 +120,30 @@
     </div>
 </div>
 
+<!-- 退货理由弹窗 -->
+<div class="modal fade" id="returnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">申请退货</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="returnOrderId">
+                <div class="mb-3">
+                    <label class="form-label">请说明退货理由：</label>
+                    <textarea class="form-control" id="returnReason" rows="3" placeholder="例如：商品与描述不符、破损等..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="submitReturn()">提交申请</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function sendAction(url) {
@@ -130,6 +168,33 @@
     function cancelOrder(orderId) {
         if(!confirm("⚠️ 确定要拒绝发货并取消订单吗？\n\n取消后，商品将自动重新上架，买家会收到退款通知。")) return;
         sendAction('/api/trade/cancel/' + orderId);
+    }
+
+    // 打开弹窗
+    var returnModal;
+    function openReturnModal(orderId) {
+        document.getElementById('returnOrderId').value = orderId;
+        document.getElementById('returnReason').value = ''; // 清空
+        // 初始化 Bootstrap Modal
+        if(!returnModal) returnModal = new bootstrap.Modal(document.getElementById('returnModal'));
+        returnModal.show();
+    }
+
+    // 提交退货
+    function submitReturn() {
+        var id = document.getElementById('returnOrderId').value;
+        var reason = document.getElementById('returnReason').value;
+
+        if(!reason.trim()) { alert("请填写理由"); return; }
+
+        fetch('/api/trade/return/' + id, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ reason: reason })
+        }).then(r => r.json()).then(d => {
+            alert(d.message);
+            if(d.success) location.reload();
+        });
     }
 </script>
 

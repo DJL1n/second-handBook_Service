@@ -9,7 +9,8 @@ create table if not exists orders
     STATUS           varchar(50) default 'WAIT_SHIP' null comment '订单状态',
     SHIPPING_ADDRESS varchar(255)                    null comment '收货地址',
     CREATED_AT       datetime                        null,
-    UPDATED_AT       datetime                        null
+    UPDATED_AT       datetime                        null,
+    return_reason TEXT COMMENT '退货理由'
 );
 
 create table if not exists users
